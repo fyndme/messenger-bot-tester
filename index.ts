@@ -75,7 +75,7 @@ export default class Tester {
 
             _savedThis.checkResponse(body, parsedResponse, res);
         });
-        
+
         return this;
     }
 
@@ -101,7 +101,7 @@ export default class Tester {
             const _savedThis = this;
             this.stepMapArray[parsedResponse.recipient].shift();
             // console.log('checking the response...');
-            this.promise[parsedResponse.recipient] = this.promise[parsedResponse.recipient].then(() => new Promise((resolve) => {
+            this.promise[parsedResponse.recipient] = new Promise((resolve) => {
                 // console.log(`create expect promise for ${(<any>currentStep).constructor.name}`);
                 // console.log('currentStep', currentStep);
 
@@ -109,7 +109,7 @@ export default class Tester {
                 if (currentStep.type !== parsedResponse.type) {
                     return _savedThis.rejectFunction[parsedResponse.recipient](new Error(`Script does not match response type, got '${ResponseTypes[parsedResponse.type]}' but expected '${ResponseTypes[currentStep.type]}'`));
                 }
-                
+
                 // console.log('checking contents..');
                 try {
                     if (currentStep.check(realResponse)) {
@@ -125,7 +125,7 @@ export default class Tester {
                 res.sendStatus(200);
                 return _savedThis.rejectFunction[parsedResponse.recipient](new Error(`Script does not match response expected`));
 
-            }))
+            })
                 .then(() => {
                     // console.log('running next step...');
                     return _savedThis.runNextStep(parsedResponse.recipient)
@@ -191,7 +191,7 @@ export default class Tester {
                 _savedThis.finalResolveFunction[script.userID] = resolve;
                 _savedThis.rejectFunction[script.userID] = reject;
                 _savedThis.runNextStep(script.userID);
-            }));     
+            }));
     }
 }
 
@@ -230,7 +230,7 @@ export class Script {
         this.script.push(responseInstance);
         return this;
     }
-    
+
     public expectTextResponse(text: string): this {
         return this.expectRawResponse(new TextResponse([text]));
     }
