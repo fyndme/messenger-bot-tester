@@ -1,5 +1,5 @@
 {
-  "name": "messenger-bot-tester",
+  "name": "tarjimly-messenger-bot-tester",
   "version": "1.3.1",
   "description": "Test your messenger bot",
   "main": "lib/index.js",
@@ -10,9 +10,9 @@
     "build": "tsc",
     "prepublish": "npm run build && npm test"
   },
-  "repository": "fyndme/messenger-bot-tester",
+  "repository": "azizkag/messenger-bot-tester",
   "typings": "lib/index",
-  "author": "Adam Juhasz",
+  "author": "Adam Juhasz -> Aziz Alghunaim",
   "license": "MIT",
   "dependencies": {
     "api-check": "^7.5.5",

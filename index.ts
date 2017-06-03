@@ -7,7 +7,7 @@ import * as _ from 'lodash';
 
 import { checkSendAPI, ResponseTypes, CheckResult } from './checker';
 import { Response, TextResponse, GenericTemplateResponse, ButtonTemplateResponse, QuickRepliesResponse } from './responses';
-import { Message, TextMessage, DelayMessage, PostbackMessage, PostbackMessageWithReferral } from './messages';
+import { Message, TextMessage, DelayMessage, PostbackMessage, PostbackMessageWithReferral, QuickReplyMessage } from './messages';
 
 import * as types from './webhook-types';
 import * as sendTypes from './send-types';
@@ -75,7 +75,7 @@ export default class Tester {
 
             _savedThis.checkResponse(body, parsedResponse, res);
         });
-        
+
         return this;
     }
 
@@ -109,7 +109,7 @@ export default class Tester {
                 if (currentStep.type !== parsedResponse.type) {
                     return _savedThis.rejectFunction[parsedResponse.recipient](new Error(`Script does not match response type, got '${ResponseTypes[parsedResponse.type]}' but expected '${ResponseTypes[currentStep.type]}'`));
                 }
-                
+
                 // console.log('checking contents..');
                 try {
                     if (currentStep.check(realResponse)) {
@@ -191,7 +191,7 @@ export default class Tester {
                 _savedThis.finalResolveFunction[script.userID] = resolve;
                 _savedThis.rejectFunction[script.userID] = reject;
                 _savedThis.runNextStep(script.userID);
-            }));     
+            }));
     }
 }
 
@@ -226,11 +226,16 @@ export class Script {
         return this;
     }
 
+    public sendQuickReplyMessage(text: string, payload: string): this {
+        this.script.push(new QuickReplyMessage(this.userID, this.pageID, this.seq++).create(text, payload));
+        return this;
+    }
+
     public expectRawResponse(responseInstance: Response): this {
         this.script.push(responseInstance);
         return this;
     }
-    
+
     public expectTextResponse(text: string): this {
         return this.expectRawResponse(new TextResponse([text]));
     }
