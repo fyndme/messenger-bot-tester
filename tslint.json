@@ -1,0 +1,15 @@
+{
+  "extends": "tslint:recommended",
+  "rules": {
+    "curly": true,
+    "ordered-imports": false,
+    "max-line-length": false,
+    "object-literal-sort-keys": false,
+    "variable-name": false
+  },
+  "jsRules": {
+    "curly": true
+  },
+  "rulesDirectory": [
+  ]
+}

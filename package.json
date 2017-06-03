@@ -20,11 +20,14 @@
     "body-parser": "^1.15.2",
     "express": "^4.14.0",
     "facebook-send-api": "^2.5.0",
+    "gulp": "^3.9.1",
+    "gulp-typescript": "^3.1.7",
     "lodash": "^4.15.0",
-    "request-promise": "^4.1.1"
+    "request-promise": "^4.1.1",
+    "tslint": "^5.4.2",
+    "typescript": "^2.3.4"
   },
-  "peerDependencies": {
-  },
+  "peerDependencies": {},
   "devDependencies": {
     "@types/bluebird": "^3.0.35",
     "@types/body-parser": "0.0.33",
