@@ -98,13 +98,31 @@ export default class Tester {
         return Promise.resolve();
     }
 
+    public endMultipleScriptTest() {
+      this.multiScriptId = null;
+      this.multipleStepsOrder = [];
+    }
+
     private checkResponse(realResponse: any, parsedResponse: CheckResult, res: express.Response): void {
         const currentStep = this.stepMapArray[parsedResponse.recipient][0];
         if (currentStep instanceof Response) {
             const _savedThis = this;
             this.stepMapArray[parsedResponse.recipient].shift();
-            // console.log('checking the response...');
-            this.promise[parsedResponse.recipient] = this.promise[parsedResponse.recipient].then(() => new Promise((resolve) => {
+            let promiseId: string;
+            if (!_.isNull(this.multiScriptId)) {
+              promiseId = this.multiScriptId;
+              const expectedUser = this.multipleStepsOrder.shift();
+              console.log("response popped uesr ", expectedUser);
+              if (expectedUser !== parsedResponse.recipient) {
+                return _savedThis.rejectFunction[parsedResponse.recipient](new Error(`Multi-script error failed got resposne for user '${parsedResponse.recipient}'  but expeccted response for user '${expectedUser}'`));
+              }
+            } else {
+              promiseId = parsedResponse.recipient;
+            }
+            // console.log('====> checking the response... promise is', promiseId);
+            // console.log("script id", this.multiScriptId);
+            // console.log("scripts order", this.multipleStepsOrder);
+            this.promise[promiseId] = this.promise[promiseId].then(() => new Promise((resolve) => {
                 // console.log(`create expect promise for ${(<any>currentStep).constructor.name}`);
                 // console.log('currentStep', currentStep);
 
@@ -131,7 +149,7 @@ export default class Tester {
             }))
                 .then(() => {
                     // console.log('running next step...');
-                    if (!_.isEmpty(_savedThis.multipleStepsOrder)) {
+                    if (!_.isNull(this.multiScriptId)) {
                       return _savedThis.runNextStepMultipleScripts(_savedThis.multiScriptId);
                     } else {
                       return _savedThis.runNextStep(parsedResponse.recipient);
@@ -151,9 +169,10 @@ export default class Tester {
 
       do {
           nextUser = _savedThis.multipleStepsOrder.shift();
+          // console.log("==> popped next user : ", nextUser);
 
 
-          if (nextUser === 'undefined') {
+          if (typeof nextUser === 'undefined') {
               // console.log('end of array');
               this.promise[scriptId] = this.promise[scriptId].then(() => {
                   // console.log('clear');
@@ -167,7 +186,9 @@ export default class Tester {
           if (nextStep instanceof Response) {
               const localStep: Response = nextStep;
               // console.log(`expecting a ${(<any>localStep).constructor.name}`);
+              // console.log("unshifting user ", nextUser);
               this.stepMapArray[nextUser].unshift(nextStep);
+              this.multipleStepsOrder.unshift(nextUser);
               break;
           } else if (nextStep instanceof Message) {
               const localStep: Message = nextStep;
@@ -176,7 +197,8 @@ export default class Tester {
                   return localStep.send(this.host);
               });
           } else {
-              // console.log(nextStep);
+              // console.log("corrupt step ", nextStep);
+              // console.log("corrupt user ", nextUser);
               this.promise[scriptId] = this.promise[scriptId].then(() => Promise.reject(new Error('corrupt script')));
           }
       } while (nextStep instanceof Message)

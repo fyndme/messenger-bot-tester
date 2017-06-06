@@ -26,6 +26,7 @@ export default class Tester {
     constructor(portToListenOn: number, addressToSendTo: string);
     startListening(): Promise<void>;
     stopListening(): Promise<void>;
+    endMultipleScriptTest(): void;
     private checkResponse(realResponse, parsedResponse, res);
     private runNextStepMultipleScripts(scriptId);
     private runNextStep(recipient);
