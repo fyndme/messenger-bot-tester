@@ -1,6 +1,6 @@
 {
   "name": "tarjimly-messenger-bot-tester",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Test your messenger bot",
   "main": "lib/index.js",
   "scripts": {
