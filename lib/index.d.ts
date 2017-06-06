@@ -21,12 +21,16 @@ export default class Tester {
     private finalResolveFunction;
     private rejectFunction;
     private stepMapArray;
+    private multipleStepsOrder;
+    private multiScriptId;
     constructor(portToListenOn: number, addressToSendTo: string);
     startListening(): Promise<void>;
     stopListening(): Promise<void>;
     private checkResponse(realResponse, parsedResponse, res);
+    private runNextStepMultipleScripts(scriptId);
     private runNextStep(recipient);
     runScript(script: Script): Promise<void>;
+    runMultipleScripts(scriptId: string, scriptList: Script[], runningOrder: string[]): Promise<void>;
 }
 export declare class Script {
     private seq;

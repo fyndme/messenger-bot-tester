@@ -1,3 +1,4 @@
+/* tslint:disable */
 import * as express from 'express';
 import * as rp from 'request-promise';
 import * as Promise from 'bluebird'
@@ -28,6 +29,8 @@ export default class Tester {
     private finalResolveFunction: { [id: string] : () => void; } = {};
     private rejectFunction: { [id: string] : (err?: Error) => void; } = {};
     private stepMapArray: { [id: string] : Array<Message | Response>; } = {};
+    private multipleStepsOrder: string[] = [];
+    private multiScriptId: string;
 
     constructor(portToListenOn: number, addressToSendTo: string) {
         this.host = addressToSendTo;
@@ -128,13 +131,61 @@ export default class Tester {
             }))
                 .then(() => {
                     // console.log('running next step...');
-                    return _savedThis.runNextStep(parsedResponse.recipient)
+                    if (!_.isEmpty(_savedThis.multipleStepsOrder)) {
+                      return _savedThis.runNextStepMultipleScripts(_savedThis.multiScriptId);
+                    } else {
+                      return _savedThis.runNextStep(parsedResponse.recipient);
+                    }
                 })
                 .then(() => null);
         } else {
             this.rejectFunction[parsedResponse.recipient](new Error(`Script does not have a response, but received one`));
             res.sendStatus(200);
         }
+    }
+
+    private runNextStepMultipleScripts(scriptId: string): Response {
+      const _savedThis = this;
+      let nextStep: Message | Response;
+      let nextUser: string;
+
+      do {
+          nextUser = _savedThis.multipleStepsOrder.shift();
+
+
+          if (nextUser === 'undefined') {
+              // console.log('end of array');
+              this.promise[scriptId] = this.promise[scriptId].then(() => {
+                  // console.log('clear');
+                  _savedThis.finalResolveFunction[scriptId]();
+              });
+              return null;
+          }
+          nextStep = this.stepMapArray[nextUser].shift();
+          // console.log('working on:', (<any>nextStep).constructor.name);
+
+          if (nextStep instanceof Response) {
+              const localStep: Response = nextStep;
+              // console.log(`expecting a ${(<any>localStep).constructor.name}`);
+              this.stepMapArray[nextUser].unshift(nextStep);
+              break;
+          } else if (nextStep instanceof Message) {
+              const localStep: Message = nextStep;
+              this.promise[scriptId] = this.promise[scriptId].then(() => {
+                  // console.log('sending', (<any>localStep).constructor.name);
+                  return localStep.send(this.host);
+              });
+          } else {
+              // console.log(nextStep);
+              this.promise[scriptId] = this.promise[scriptId].then(() => Promise.reject(new Error('corrupt script')));
+          }
+      } while (nextStep instanceof Message)
+
+      if (nextStep instanceof Response) {
+          return nextStep;
+      }
+
+      return null;
     }
 
     private runNextStep(recipient: string): Response {
@@ -192,6 +243,22 @@ export default class Tester {
                 _savedThis.rejectFunction[script.userID] = reject;
                 _savedThis.runNextStep(script.userID);
             }));
+    }
+
+    public runMultipleScripts(scriptId: string, scriptList: Script[], runningOrder: string[]): Promise<void> {
+      let _savedThis: this = this;
+      // add scripts to script map
+      scriptList.forEach((s) => {this.stepMapArray[s.userID] = _.clone(s.script);});
+
+      return this.expressPromise
+          .then(() => new Promise((resolve, reject) => {
+            _savedThis.promise[scriptId] = Promise.resolve();
+            _savedThis.finalResolveFunction[scriptId] = resolve;
+            _savedThis.rejectFunction[scriptId] = reject;
+            _savedThis.multipleStepsOrder = runningOrder;
+            _savedThis.multiScriptId = scriptId;
+            _savedThis.runNextStepMultipleScripts(scriptId);
+          }));
     }
 }
 
