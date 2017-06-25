@@ -68,7 +68,7 @@ export default class Tester {
 
             const token: string = req.query.access_token;
             if (typeof token !== 'string') {
-                return _savedThis.rejectFunction[parsedResponse.recipient](new Error('Token must be included on all requests'));
+                return _savedThis.rejectFunction[getScriptKey(this.multiScriptId, parsedResponse.recipient)](new Error('Token must be included on all requests'));
             }
 
             if (parsedResponse.type === ResponseTypes.sender_action) {
@@ -109,12 +109,13 @@ export default class Tester {
             const _savedThis = this;
             this.stepMapArray[parsedResponse.recipient].shift();
             let promiseId: string;
-            if (!_.isNull(this.multiScriptId)) {
+            if (!_.isNull(this.multiScriptId) && !_.isUndefined(this.multiScriptId)) {
               promiseId = this.multiScriptId;
               const expectedUser = this.multipleStepsOrder.shift();
-              console.log("response popped uesr ", expectedUser);
+              // console.log("=> multiscript Id is: ", promiseId);
+              // console.log("response popped uesr ", expectedUser);
               if (expectedUser !== parsedResponse.recipient) {
-                return _savedThis.rejectFunction[parsedResponse.recipient](new Error(`Multi-script error failed got resposne for user '${parsedResponse.recipient}'  but expeccted response for user '${expectedUser}'`));
+                return _savedThis.rejectFunction[getScriptKey(this.multiScriptId, parsedResponse.recipient)](new Error(`Multi-script error failed got resposne for user '${parsedResponse.recipient}'  but expeccted response for user '${expectedUser}'`));
               }
             } else {
               promiseId = parsedResponse.recipient;
@@ -128,7 +129,7 @@ export default class Tester {
 
                 // console.log('checking type..');
                 if (currentStep.type !== parsedResponse.type) {
-                    return _savedThis.rejectFunction[parsedResponse.recipient](new Error(`Script does not match response type, got '${ResponseTypes[parsedResponse.type]}' but expected '${ResponseTypes[currentStep.type]}'`));
+                    return _savedThis.rejectFunction[getScriptKey(this.multiScriptId, parsedResponse.recipient)](new Error(`Script does not match response type, got '${ResponseTypes[parsedResponse.type]}' but expected '${ResponseTypes[currentStep.type]}'`));
                 }
 
                 // console.log('checking contents..');
@@ -140,16 +141,16 @@ export default class Tester {
                     }
                 } catch(err) {
                     res.sendStatus(200);
-                    return _savedThis.rejectFunction[parsedResponse.recipient](err);
+                    return _savedThis.rejectFunction[getScriptKey(this.multiScriptId, parsedResponse.recipient)](err);
                 }
 
                 res.sendStatus(200);
-                return _savedThis.rejectFunction[parsedResponse.recipient](new Error(`Script does not match response expected`));
+                return _savedThis.rejectFunction[getScriptKey(this.multiScriptId, parsedResponse.recipient)](new Error(`Script does not match response expected`));
 
             }))
                 .then(() => {
                     // console.log('running next step...');
-                    if (!_.isNull(this.multiScriptId)) {
+                    if (!_.isNull(this.multiScriptId) && !_.isUndefined(this.multiScriptId)) {
                       return _savedThis.runNextStepMultipleScripts(_savedThis.multiScriptId);
                     } else {
                       return _savedThis.runNextStep(parsedResponse.recipient);
@@ -157,7 +158,9 @@ export default class Tester {
                 })
                 .then(() => null);
         } else {
-            this.rejectFunction[parsedResponse.recipient](new Error(`Script does not have a response, but received one`));
+            // console.log("==> recipient: ", parsedResponse.recipient);
+            // console.log("==> reject map: ", this.rejectFunction);
+            this.rejectFunction[getScriptKey(this.multiScriptId, parsedResponse.recipient)](new Error(`Script does not have a response, but received one`));
             res.sendStatus(200);
         }
     }
@@ -348,4 +351,9 @@ export class Script {
     public expectTemplateResponse(elementCount: number, elements: Object): this {
         return this.expectRawResponse(new GenericTemplateResponse().elementCount(elementCount).elements(elements));
     }
+}
+
+
+function getScriptKey(multiscriptId, recipientId) {
+  return multiscriptId? multiscriptId : recipientId;
 }
