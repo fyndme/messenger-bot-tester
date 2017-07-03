@@ -97,7 +97,7 @@ export class ButtonTemplateResponse extends Response {
         const attachment = payload.message.attachment.payload as sendTypes.ButtonPayload;
         const textMatches = _.includes(this.allowedText, attachment.text);
         if (textMatches === false) {
-          throw new Error(`text doesn't match expected '${this.allowedText}' but recieved '${attachment.text}'`);
+          throw new Error(`Recipient: '${payload.recipient.id}'. text doesn't match expected '${this.allowedText}' but recieved '${attachment.text}'`);
         }
         const buttonsMatch = _.intersectionWith(this.buttons, attachment.buttons, _.isEqual).length >= this.buttons.length;
         if (buttonsMatch === false) {

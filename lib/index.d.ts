@@ -31,7 +31,7 @@ export default class Tester {
     private runNextStepMultipleScripts(scriptId);
     private runNextStep(recipient);
     runScript(script: Script): Promise<void>;
-    runMultipleScripts(scriptId: string, scriptList: Script[], runningOrder: string[]): Promise<void>;
+    runMultipleScripts(scriptId: string, scriptList: Script[], runningOrder: (string | string[])[]): Promise<void>;
 }
 export declare class Script {
     private seq;

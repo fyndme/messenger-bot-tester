@@ -29,7 +29,7 @@ export default class Tester {
     private finalResolveFunction: { [id: string] : () => void; } = {};
     private rejectFunction: { [id: string] : (err?: Error) => void; } = {};
     private stepMapArray: { [id: string] : Array<Message | Response>; } = {};
-    private multipleStepsOrder: string[] = [];
+    private multipleStepsOrder: (string | string[])[] = [];
     private multiScriptId: string;
 
     constructor(portToListenOn: number, addressToSendTo: string) {
@@ -112,22 +112,34 @@ export default class Tester {
             if (!_.isNull(this.multiScriptId) && !_.isUndefined(this.multiScriptId)) {
               promiseId = this.multiScriptId;
               const expectedUser = this.multipleStepsOrder.shift();
-              // console.log("=> multiscript Id is: ", promiseId);
-              // console.log("response popped uesr ", expectedUser);
-              if (expectedUser !== parsedResponse.recipient) {
-                return _savedThis.rejectFunction[getScriptKey(this.multiScriptId, parsedResponse.recipient)](new Error(`Multi-script error failed got resposne for user '${parsedResponse.recipient}'  but expeccted response for user '${expectedUser}'`));
+              console.log("=> multiscript Id is: ", promiseId);
+              console.log("response popped uesr ", expectedUser);
+              if (_.isArray(expectedUser)) {
+                const userIdx = expectedUser.indexOf(parsedResponse.recipient);
+                if (userIdx == -1) { // user is not in the array of expected users
+                  return _savedThis.rejectFunction[getScriptKey(this.multiScriptId, parsedResponse.recipient)](new Error(`Multi-script error failed got resposne for user '${parsedResponse.recipient}'  but expeccted response for any of the users '${expectedUser}'`));
+                }
+                expectedUser.splice(userIdx, 1);
+                if (!_.isEmpty(expectedUser)) {
+                  this.multipleStepsOrder.unshift(expectedUser);
+                }
+              } else {
+                if (expectedUser !== parsedResponse.recipient) {
+                  return _savedThis.rejectFunction[getScriptKey(this.multiScriptId, parsedResponse.recipient)](new Error(`Multi-script error failed got resposne for user '${parsedResponse.recipient}'  but expeccted response for user '${expectedUser}'`));
+                }
               }
+
             } else {
               promiseId = parsedResponse.recipient;
             }
-            // console.log('====> checking the response... promise is', promiseId);
-            // console.log("script id", this.multiScriptId);
-            // console.log("scripts order", this.multipleStepsOrder);
+            console.log('====> checking the response... promise is', promiseId);
+            console.log("script id", this.multiScriptId);
+            console.log("scripts order", this.multipleStepsOrder);
             this.promise[promiseId] = this.promise[promiseId].then(() => new Promise((resolve) => {
-                // console.log(`create expect promise for ${(<any>currentStep).constructor.name}`);
-                // console.log('currentStep', currentStep);
+                console.log(`create expect promise for ${(<any>currentStep).constructor.name}`);
+                console.log('currentStep', currentStep);
 
-                // console.log('checking type..');
+                console.log('checking type..');
                 if (currentStep.type !== parsedResponse.type) {
                     return _savedThis.rejectFunction[getScriptKey(this.multiScriptId, parsedResponse.recipient)](new Error(`Script does not match response type, got '${ResponseTypes[parsedResponse.type]}' but expected '${ResponseTypes[currentStep.type]}'`));
                 }
@@ -149,7 +161,7 @@ export default class Tester {
 
             }))
                 .then(() => {
-                    // console.log('running next step...');
+                    // console.log('running next step...');user
                     if (!_.isNull(this.multiScriptId) && !_.isUndefined(this.multiScriptId)) {
                       return _savedThis.runNextStepMultipleScripts(_savedThis.multiScriptId);
                     } else {
@@ -171,39 +183,44 @@ export default class Tester {
       let nextUser: string;
 
       do {
-          nextUser = _savedThis.multipleStepsOrder.shift();
-          // console.log("==> popped next user : ", nextUser);
-
-
-          if (typeof nextUser === 'undefined') {
-              // console.log('end of array');
-              this.promise[scriptId] = this.promise[scriptId].then(() => {
-                  // console.log('clear');
-                  _savedThis.finalResolveFunction[scriptId]();
-              });
-              return null;
-          }
-          nextStep = this.stepMapArray[nextUser].shift();
-          // console.log('working on:', (<any>nextStep).constructor.name);
-
-          if (nextStep instanceof Response) {
-              const localStep: Response = nextStep;
-              // console.log(`expecting a ${(<any>localStep).constructor.name}`);
-              // console.log("unshifting user ", nextUser);
-              this.stepMapArray[nextUser].unshift(nextStep);
-              this.multipleStepsOrder.unshift(nextUser);
-              break;
-          } else if (nextStep instanceof Message) {
-              const localStep: Message = nextStep;
-              this.promise[scriptId] = this.promise[scriptId].then(() => {
-                  // console.log('sending', (<any>localStep).constructor.name);
-                  return localStep.send(this.host);
-              });
+          const potentialNextUser = _savedThis.multipleStepsOrder[0];
+          if (_.isArray(potentialNextUser)) {
+            break;
           } else {
-              // console.log("corrupt step ", nextStep);
-              // console.log("corrupt user ", nextUser);
-              this.promise[scriptId] = this.promise[scriptId].then(() => Promise.reject(new Error('corrupt script')));
+            nextUser = _savedThis.multipleStepsOrder.shift() as string;
+            // console.log("==> popped next user : ", nextUser);
+
+            if (typeof nextUser === 'undefined') {
+                // console.log('end of array');
+                this.promise[scriptId] = this.promise[scriptId].then(() => {
+                    // console.log('clear');
+                    _savedThis.finalResolveFunction[scriptId]();
+                });
+                return null;
+            }
+            nextStep = this.stepMapArray[nextUser].shift();
+            // console.log('working on:', (<any>nextStep).constructor.name);
+
+            if (nextStep instanceof Response) {
+                const localStep: Response = nextStep;
+                // console.log(`expecting a ${(<any>localStep).constructor.name}`);
+                // console.log("unshifting user ", nextUser);
+                this.stepMapArray[nextUser].unshift(nextStep);
+                this.multipleStepsOrder.unshift(nextUser);
+                break;
+            } else if (nextStep instanceof Message) {
+                const localStep: Message = nextStep;
+                this.promise[scriptId] = this.promise[scriptId].then(() => {
+                    // console.log('sending', (<any>localStep).constructor.name);
+                    return localStep.send(this.host);
+                });
+            } else {
+                // console.log("corrupt step ", nextStep);
+                // console.log("corrupt user ", nextUser);
+                this.promise[scriptId] = this.promise[scriptId].then(() => Promise.reject(new Error('corrupt script')));
+            }
           }
+
       } while (nextStep instanceof Message)
 
       if (nextStep instanceof Response) {
@@ -270,7 +287,8 @@ export default class Tester {
             }));
     }
 
-    public runMultipleScripts(scriptId: string, scriptList: Script[], runningOrder: string[]): Promise<void> {
+    public runMultipleScripts(scriptId: string, scriptList: Script[], runningOrder: (string|string[])[]): Promise<void> {
+      console.log("==> called this correctly:", runningOrder);
       let _savedThis: this = this;
       // add scripts to script map
       scriptList.forEach((s) => {this.stepMapArray[s.userID] = _.clone(s.script);});
