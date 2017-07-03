@@ -172,7 +172,7 @@ export default class Tester {
         } else {
             // console.log("==> recipient: ", parsedResponse.recipient);
             // console.log("==> reject map: ", this.rejectFunction);
-            this.rejectFunction[getScriptKey(this.multiScriptId, parsedResponse.recipient)](new Error(`Script does not have a response, but received one`));
+            this.rejectFunction[getScriptKey(this.multiScriptId, parsedResponse.recipient)](new Error(`Script does not have a response, but received one to user ${parsedResponse.recipient}. and type is: ${ResponseTypes[parsedResponse.type]}. and message is ${realResponse.message.text}`));
             res.sendStatus(200);
         }
     }
@@ -215,8 +215,8 @@ export default class Tester {
                     return localStep.send(this.host);
                 });
             } else {
-                // console.log("corrupt step ", nextStep);
-                // console.log("corrupt user ", nextUser);
+                console.log("corrupt step ", nextStep);
+                console.log("corrupt user ", nextUser);
                 this.promise[scriptId] = this.promise[scriptId].then(() => Promise.reject(new Error('corrupt script')));
             }
           }
