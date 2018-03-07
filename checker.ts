@@ -140,6 +140,7 @@ const buttonArray =
       type: apiCheck.oneOf(['web_url']),
       title: apiCheck.string,
       url: apiCheck.string,
+      webview_height_ratio: apiCheck.string.optional,
     }).strict,
   ]));
 
