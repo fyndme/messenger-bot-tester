@@ -9,6 +9,7 @@ export interface Button {
   title: string,
   payload?: string,
   url?: string,
+  webview_height_ratio?: string,
 }
 
 export interface Item {
